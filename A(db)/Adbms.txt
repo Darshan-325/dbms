@@ -1,0 +1,404 @@
+*********************pr2*******************
+VIEW----------------
+CREATE VIEW StudentInfo AS
+SELECT s_id, s_name, age
+FROM Student
+WHERE age > 20;
+
+-- Querying the view
+SELECT * FROM StudentInfo;
+
+INDEX-------------------
+CREATE INDEX idx_course_marks ON Course(marks);
+
+-- Query to demonstrate the index usage
+SELECT c_id, c_name, marks FROM Course WHERE marks > 60;
+
+SYNONYM------------------------
+CREATE SYNONYM CourseSyn FOR Course;
+
+-- Querying the synonym
+SELECT * FROM CourseSyn;
+
+
+*********************pr3*******************
+INNER JOIN------------
+SELECT S.s_id, S.s_name, S.age, C.c_name, C.marks
+FROM Student S
+INNER JOIN Course C ON S.c_id = C.c_id;
+
+LEFT JOIN----------------
+SELECT S.s_id, S.s_name, S.age, C.c_name, C.marks
+FROM Student S
+LEFT JOIN Course C ON S.c_id = C.c_id;
+
+RIGHT JOIN--------------
+SELECT S.s_id, S.s_name, S.age, C.c_name, C.marks
+FROM Student S
+RIGHT JOIN Course C ON S.c_id = C.c_id;
+
+OUTER JOIN---------------
+SELECT S.s_id, S.s_name, S.age, C.c_name, C.marks
+FROM Student S
+LEFT JOIN Course C ON S.c_id = C.c_id
+UNION
+SELECT S.s_id, S.s_name, S.age, C.c_name, C.marks
+FROM Student S
+RIGHT JOIN Course C ON S.c_id = C.c_id;
+
+SUB QUERY-------------
+SELECT A.s_name, B.c_name
+FROM (SELECT s_name, c_id FROM Student) A
+JOIN Course B ON A.c_id = B.c_id;
+
+SELECT s_id, s_name
+FROM Student
+WHERE c_id IN (SELECT c_id FROM Course WHERE marks > 60);
+
+
+
+
+
+
+
+*********************pr4*******************
+
+delimiter //
+
+CREATE PROCEDURE addition()
+
+BEGIN
+declare a int;
+declare b int;
+declare c int;
+
+set a := 60;
+set b := 50;
+set c := a + b;
+                       
+
+  select 'PL SQL Addition Program = ' , c as msg;
+  select c as Addition;      
+ 
+END;
+
+//
+
+delimiter ;
+
+CALL addition();
+
+
+
+DECLARE
+    -- Declare variables
+    num1 INT := 10;
+    num2 INT := 0;  -- Division by zero will occur
+    result INT;
+BEGIN
+    -- Perform the division
+    result := num1 / num2;  -- This will cause a division by zero error
+
+    -- Display the result if no errors
+    DBMS_OUTPUT.PUT_LINE('Result: ' || result);
+    
+EXCEPTION
+    -- Handle specific exceptions
+    WHEN ZERO_DIVIDE THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Division by zero!');
+    
+    -- Handle all other exceptions
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
+END;
+/
+
+
+
+
+
+
+
+
+
+
+
+
+*********************pr5*******************
+
+delimiter //
+ 
+create procedure Find_Circle_Area()
+BEGIN
+declare r int;
+declare a float;
+
+set r = 5;
+    loop_label:  LOOP
+        IF  r > 9 THEN
+            LEAVE  loop_label;
+        END  IF;
+           
+        set a = 3.14 * r * r;
+           insert into tbl_area(radius,area) values(r,a);
+            
+           set r = r + 1;
+       
+    END LOOP;
+
+END;
+ 
+ //
+
+delimiter ;
+
+*********************pr6*******************
+
+delimiter //
+
+    create procedure p_fine(IN rno int,IN  bname varchar(20))
+    begin
+       declare d1 date;    
+       declare daycnt int;
+       declare fine_amt int;
+        SELECT DateofIssue into d1 FROM Borrower
+      WHERE Roll_no = rno and book= bname;
+       select DATEDIFF(now(),d1) into daycnt;
+         if(daycnt >= 15 and daycnt <= 30) then
+               set fine_amt := daycnt * 5;
+                 insert into Fine(Roll_no,sDate,Amt) values (rno,now(),fine_amt);
+                 update Borrower set status = 'R' where Roll_no = rno;
+       ELSEIF(daycnt > 30) then
+                set fine_amt := daycnt * 50;
+                 insert into Fine(Roll_no,sDate,Amt) values (rno,now(),fine_amt);
+                 update Borrower set status = 'R' where Roll_no = rno;    
+         else         
+                          update Borrower set status = 'R' where Roll_no = rno;             
+         end if;    
+     end;
+//
+
+delimiter ;
+
+delimiter //
+mysql> create procedure proc_Grade()
+-> begin
+-> DECLARE done INT default 0;
+-> declare s_marks int;
+-> declare s_rollno int;
+-> declare s_name varchar(30);
+-> declare s_class varchar(30);
+-> declare s_student cursor For Select rollno, name, marks from stud_marks;
+-> DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+-> open s_student;
+read_loop: LOOP
+-> fetch s_student into s_rollno,s_name,s_marks;
+-> IF done = 1 THEN LEAVE read_loop;
+-> END IF;
+-> if(s_marks<=1500 and s_marks>=990) then set s_class='Distinction';
+-> elseif(s_marks<=989 and s_marks>=900) then set s_class='First Class';
+-> elseif (s_marks<=899 and s_marks>=825) then set s_class='Higher Second Class';
+-> else
+-> set s_class='Pass';
+-> end if;
+-> insert into Result(rollno,name,class)values(s_rollno,s_name,s_class);
+-> END LOOP;
+-> close s_student;
+-> end;
+-> //
+Query OK, 0 rows affected (0.00 sec)
+mysql> delimiter ;
+
+
+*********************pr7*******************
+CURSOR
+delimiter //
+
+    create procedure proc_Grade()
+    begin
+        DECLARE done INT default  0;
+
+        declare s_marks int;
+        declare s_rollno int;
+        declare s_name varchar(30);
+        declare s_class varchar(30);
+
+        declare s_student cursor For Select  rollno, name, marks from stud_marks;
+
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+
+         open s_student;
+   
+     read_loop: LOOP
+              fetch s_student  into s_rollno,s_name,s_marks;
+
+    IF done = 1 THEN
+          LEAVE read_loop;
+    END IF;
+
+         if(s_marks<=1500 and s_marks>=990) then
+             set s_class='Distinction';
+
+        elseif(s_marks<=989 and s_marks>=900) then
+             set s_class='First Class';
+       
+        elseif (s_marks<=899 and s_marks>=825) then
+            set s_class='Higher Second Class';
+
+    else
+     set s_class='Pass';
+
+    end if;
+     insert into Result(rollno,name,class)values(s_rollno,s_name,s_class);
+
+  END LOOP;
+         close s_student;
+         end;
+//
+
+delimiter ;
+CALL proc_Grade();
+
+
+
+*********************pr8*******************
+delimiter //
+
+CREATE TRIGGER Make_audit1
+  AFTER DELETE ON lib_book
+  FOR EACH ROW
+BEGIN
+  INSERT INTO lib_Audit (bid, bname, qty)
+  VALUES (OLD.bid, OLD.bname,OLD.qty);
+END;
+//
+
+delimiter ;
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+drop trigger if exists Make_audit2;
+
+delimiter //
+
+CREATE TRIGGER Make_audit2
+  AFTER UPDATE ON lib_book
+  FOR EACH ROW
+BEGIN
+  INSERT INTO lib_Audit (bid, bname, qty)
+  VALUES (OLD.bid, OLD.bname,OLD.qty);
+END;
+//
+
+delimiter ;
+
+*********************pr10*******************
+
+use school; 
+db.createCollection('students');
+// Insert a single document
+db.students.insertOne({
+  name: "Alice",
+  age: 20,
+  course: "Mathematics"
+});
+
+// Insert multiple documents
+db.students.insertMany([
+  { name: "Bob", age: 22, course: "Physics" },
+  { name: "Charlie", age: 23, course: "Chemistry" },
+  { name: "Daisy", age: 21, course: "Biology" }
+]);
+// Get all students
+db.students.find().pretty();  // .pretty() formats the output
+// Get student by name
+db.students.find({ name: "Alice" }).pretty();
+// Update a single document (modify Alice's course)
+db.students.updateOne(
+  { name: "Alice" },  // Filter to find the document
+  { $set: { course: "Computer Science" } }  // Update operation
+);
+
+// Update multiple documents (change course for all students aged 22)
+db.students.updateMany(
+  { age: 22 },
+  { $set: { course: "Mathematics" } }
+);
+// Delete a single document by name
+db.students.deleteOne({ name: "Alice" });
+
+// Delete all students who are older than 22
+db.students.deleteMany({ age: { $gt: 22 } });
+
+
+*********************pr12*******************
+MAP REDUCE
+db.Stud.mapReduce(
+... ... function(){emit(this.Branch,this.Marks);},
+... ... function(key,values){ return Array.sum(values)},
+... ... {
+... ... query : {"Marks":{$gt:60}},
+... ... out : "Total_Marks"
+... ... }
+... ... );
+{
+"result" : "Total_Marks",
+"timeMillis" : 215,
+"counts" : {
+"input" : 3,
+"emit" : 3,
+"reduce" : 1,
+"output" : 2
+},
+"ok" : 1
+}
+> db.Avg_Marks.find().pretty();
+{ "_id" : "Computer", "value" : 85 }
+{ "_id" : "IT", "value" : 70 }
+
+
+
+*********************DDL*******************
+
+CREATE TABLE Teacher (
+    t_id INT PRIMARY KEY,       -- Teacher ID
+    t_name VARCHAR(50),         -- Teacher Name
+    subject VARCHAR(50)         -- Subject taught by the teacher
+);
+
+ALTER TABLE Student 
+ADD COLUMN phone_number VARCHAR(15);
+
+ALTER TABLE Course 
+MODIFY COLUMN marks INT NOT NULL;
+
+DROP TABLE Teacher;
+
+RENAME TABLE Course TO CourseDetails;
+
+*********************DML*******************
+
+-- Inserting a new student into the Student table
+INSERT INTO Student (s_id, s_name, age, c_id, email) 
+VALUES (7, 'George', 25, 102, 'george@example.com');
+
+-- Update the email of the student with s_id 3
+UPDATE Student 
+SET email = 'charlie_new@example.com' 
+WHERE s_id = 3;
+
+-- Delete the student with s_id 5
+DELETE FROM Student 
+WHERE s_id = 5;
+
+-- Retrieve all students' names and their corresponding course names
+SELECT Student.s_name, Course.c_name 
+FROM Student
+JOIN Course ON Student.c_id = Course.c_id;
+
+-- Retrieve students who are aged over 22
+SELECT * FROM Student 
+WHERE age > 22;
